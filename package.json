@@ -1,0 +1,14 @@
+{
+  "name": "imei-tac-checker",
+  "version": "1.0.0",
+  "description": "IMEI TAC & Fake Spec Refurbish Checker API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "csv-parser": "^3.2.1",
+    "express": "^5.2.1"
+  }
+}
