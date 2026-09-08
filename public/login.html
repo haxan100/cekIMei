@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - IMEI Admin</title>
+  <style>
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
+      --text: #e2e4ec; --muted: #6b7280; --accent: #3b82f6; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 36px; width: 100%; max-width: 380px; }
+    .login-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+    input { background: #12141e; border: 1px solid var(--border); color: var(--text); border-radius: 5px; padding: 10px 13px; font-size: 14px; outline: none; width: 100%; margin-bottom: 14px; }
+    input:focus { border-color: var(--accent); }
+    .input-wrap { position: relative; margin-bottom: 14px; }
+    .input-wrap input { margin-bottom: 0; }
+    .eye-btn { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); padding: 0; width: auto; display: flex; align-items: center; }
+    .eye-btn:hover { color: var(--text); opacity: 1; }
+    button { width: 100%; padding: 11px; border-radius: 5px; font-size: 14px; cursor: pointer; border: none; font-weight: 600; background: var(--accent); color: #fff; transition: opacity .15s; }
+    button:hover { opacity: .85; }
+    .error { color: #fca5a5; font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+    a { color: var(--accent); font-size: 13px; text-decoration: none; display: block; text-align: center; margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="login-title">IMEI Admin</div>
+    <div class="login-sub">Silakan login untuk mengakses panel admin</div>
+    <form onsubmit="return doLogin(event)">
+      <input type="text" id="username" placeholder="Username" autocomplete="username" autofocus>
+      <div class="input-wrap">
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+        <button type="button" class="eye-btn" id="eye-btn" onclick="toggleEye()">
+          <svg id="eye-icon-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          <svg id="eye-icon-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </button>
+      </div>
+      <button type="submit">Login</button>
+      <div class="error" id="err"></div>
+    </form>
+    <a href="/">Kembali ke Checker</a>
+  </div>
+  <script>
+    function toggleEye() {
+      var pw = document.getElementById('password');
+      var showIcon = document.getElementById('eye-icon-show');
+      var hideIcon = document.getElementById('eye-icon-hide');
+      if (pw.type === 'password') {
+        pw.type = 'text';
+        showIcon.style.display = 'block';
+        hideIcon.style.display = 'none';
+      } else {
+        pw.type = 'password';
+        showIcon.style.display = 'none';
+        hideIcon.style.display = 'block';
+      }
+    }
+
+    function doLogin(e) {
+      e.preventDefault();
+      var u = document.getElementById('username').value;
+      var p = document.getElementById('password').value;
+      var err = document.getElementById('err');
+      err.style.display = 'none';
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/v1/auth/login');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          window.location.href = '/admin.html';
+        } else {
+          err.textContent = 'Username atau password salah.';
+          err.style.display = 'block';
+        }
+      };
+      xhr.onerror = function() {
+        err.textContent = 'Koneksi error.';
+        err.style.display = 'block';
+      };
+      xhr.send(JSON.stringify({ username: u, password: p }));
+      return false;
+    }
+  </script>
+</body>
+</html>

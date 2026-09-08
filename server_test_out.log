@@ -1,0 +1,3 @@
+[Startup] Loading TAC database...
+[TAC DB] Loaded 248373 TAC entries into memory.
+[Server] IMEI TAC Checker API running on http://localhost:3000
