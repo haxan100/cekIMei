@@ -1,0 +1,431 @@
+{
+  "info": {
+    "name": "IMEI TAC Checker API",
+    "description": "IMEI TAC & Fake Spec Refurbish Checker API - Verifikasi keaslian spesifikasi perangkat seluler berdasarkan TAC (8 digit awal IMEI).\n\nBase URL: http://localhost:3000",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Check IMEI - HIGH RISK (Fake Spec)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"imei\": \"869887040000002\",\n  \"claimed_ram\": 8,\n  \"claimed_rom\": 128\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/check-imei",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "check-imei"]
+        },
+        "description": "Kasus terdeteksi palsu/refurbished. IMEI valid (OPPO A5, model code PBAM00) dengan klaim RAM 8GB & Storage 128GB yang melebihi batas pabrikan (max 4GB/64GB). PBAM00 juga masuk blacklist kode rekondisi."
+      },
+      "response": [
+        {
+          "name": "HIGH_RISK_FAKE Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imei\": \"869887040000002\",\n  \"claimed_ram\": 8,\n  \"claimed_rom\": 128\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/check-imei",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "check-imei"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"imei\": \"869887040000002\",\n    \"tac\": \"86988704\",\n    \"device_info\": {\n      \"brand\": \"OPPO\",\n      \"model_name\": \"A5\",\n      \"model_code\": \"PBAM00\"\n    },\n    \"claimed_specs\": {\n      \"ram\": \"8 GB\",\n      \"storage\": \"128 GB\"\n    },\n    \"official_limits\": {\n      \"max_ram\": \"4 GB\",\n      \"max_storage\": \"64 GB\",\n      \"standard_variants\": [\"3/64 GB\", \"4/64 GB\"]\n    },\n    \"assessment\": {\n      \"is_refurbished_fake\": true,\n      \"risk_level\": \"HIGH\",\n      \"verdict\": \"BAHAYA: Unit Refurbish / Spek Dimanipulasi\",\n      \"reasons\": [\n        \"Klaim RAM 8 GB melebihi batas hardware maksimum pabrikan (Maks: 4 GB).\",\n        \"Klaim Storage 128 GB melebihi batas maksimum model ini (Maks: 64 GB).\",\n        \"Kode model PBAM00 teridentifikasi sebagai varian distributor rekondisi.\"\n      ]\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "2. Check IMEI - LOW RISK (Official Match)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"imei\": \"869762040000007\",\n  \"claimed_ram\": 3,\n  \"claimed_rom\": 32\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/check-imei",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "check-imei"]
+        },
+        "description": "Kasus perangkat asli/sesuai standar. IMEI valid (OPPO A3s) dengan klaim RAM 3GB & Storage 32GB yang sesuai dengan batas pabrikan (max 3GB/32GB)."
+      },
+      "response": [
+        {
+          "name": "OFFICIAL_MATCH Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imei\": \"869762040000007\",\n  \"claimed_ram\": 3,\n  \"claimed_rom\": 32\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/check-imei",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "check-imei"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"imei\": \"869762040000007\",\n    \"tac\": \"86976204\",\n    \"device_info\": {\n      \"brand\": \"OPPO\",\n      \"model_name\": \"A3s\",\n      \"model_code\": \"CPH1803\"\n    },\n    \"claimed_specs\": {\n      \"ram\": \"3 GB\",\n      \"storage\": \"32 GB\"\n    },\n    \"official_limits\": {\n      \"max_ram\": \"3 GB\",\n      \"max_storage\": \"32 GB\",\n      \"standard_variants\": [\"2/16 GB\", \"3/32 GB\"]\n    },\n    \"assessment\": {\n      \"is_refurbished_fake\": false,\n      \"risk_level\": \"LOW\",\n      \"verdict\": \"AMAN: Spesifikasi Sesuai Standar Pabrik\",\n      \"reasons\": []\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "3. Check IMEI - Invalid IMEI (Luhn Fail)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"imei\": \"123456789012345\",\n  \"claimed_ram\": 8,\n  \"claimed_rom\": 128\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/check-imei",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "check-imei"]
+        },
+        "description": "Kasus format IMEI tidak valid. IMEI 123456789012345 gagal validasi Checksum Luhn."
+      },
+      "response": [
+        {
+          "name": "INVALID_IMEI Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imei\": \"123456789012345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/check-imei",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "check-imei"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"INVALID_IMEI\",\n    \"message\": \"Format IMEI tidak valid atau gagal pada validasi Checksum Luhn.\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "4. Check IMEI - TAC Not Found",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"imei\": \"999999990000009\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/check-imei",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "check-imei"]
+        },
+        "description": "Kasus TAC tidak ditemukan di database. IMEI valid secara Luhn (999999990000009) tapi TAC 99999999 tidak ada di dataset."
+      },
+      "response": [
+        {
+          "name": "TAC_NOT_FOUND Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imei\": \"999999990000009\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/check-imei",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "check-imei"]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"TAC_NOT_FOUND\",\n    \"message\": \"TAC 99999999 tidak ditemukan pada database. Data perangkat tidak dapat diverifikasi.\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "5. Check IMEI - Tanpa Claimed Specs",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"imei\": \"869887040000002\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/check-imei",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "check-imei"]
+        },
+        "description": "Lookup IMEI tanpa klaim spesifikasi. Hanya mendapatkan info device (brand, model, model_code) tanpa evaluasi RAM/Storage."
+      },
+      "response": []
+    },
+    {
+      "name": "6. TAC Lookup - GET by TAC",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/tac/86988704",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "tac", "86988704"]
+        },
+        "description": "Lookup brand & model berdasarkan 8 digit TAC tanpa evaluasi spesifikasi."
+      },
+      "response": [
+        {
+          "name": "TAC Lookup Success",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tac/86988704",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tac", "86988704"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": true,\n  \"data\": {\n    \"tac\": \"86988704\",\n    \"brand\": \"OPPO\",\n    \"model_name\": \"A5\",\n    \"model_code\": \"PBAM00\",\n    \"full_specs\": \"OPPO A5, Oppo PBAM002018\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "7. TAC Lookup - Not Found",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/tac/99999999",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "tac", "99999999"]
+        },
+        "description": "Lookup TAC yang tidak ada di database."
+      },
+      "response": [
+        {
+          "name": "TAC Not Found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tac/99999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tac", "99999999"]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"success\": false,\n  \"error\": {\n    \"code\": \"TAC_NOT_FOUND\",\n    \"message\": \"TAC 99999999 tidak ditemukan pada database.\"\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "8. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Cek status server."
+      },
+      "response": [
+        {
+          "name": "Health OK",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"status\": \"ok\"\n}"
+        }
+      ]
+    }
+  ]
+}
