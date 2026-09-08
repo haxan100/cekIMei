@@ -1,4 +1,4 @@
 node_modules/
-server_out.log
-server_err.log
-*.log
+logs.db
+tac_full.csv
+*.csv

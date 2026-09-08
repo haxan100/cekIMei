@@ -74,7 +74,7 @@
   </div>
 
   <script>
-    const API_URL = 'http://localhost:3000/api/v1/check-imei';
+    const API_URL = window.location.origin + '/api/v1/check-imei';
     document.getElementById('imei').addEventListener('input', function(e) { this.value = this.value.replace(/\D/g, '').slice(0, 15); });
     document.getElementById('imeiForm').addEventListener('submit', async function(e) {
       e.preventDefault();
