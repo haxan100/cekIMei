@@ -60,10 +60,12 @@
   <div style="display:flex; gap:4px; margin-left:8px;">
     <div class="tab active" id="tab-logs" onclick="switchTab('logs')">Log Pengecekan</div>
     <div class="tab" id="tab-import" onclick="switchTab('import')">Import TAC</div>
+    <div class="tab" id="tab-tradein" onclick="switchTab('tradein')">Import Trade-in</div>
   </div>
   <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
     <span style="font-size:12px; color:var(--muted);" id="tac-count">TAC: ...</span>
     <a href="/" style="font-size:12px; color:var(--accent);">Checker</a>
+    <a href="#" onclick="doLogout();return false;" style="font-size:12px; color:var(--danger);">Logout</a>
   </div>
 </div>
 
@@ -168,6 +170,26 @@
     </div>
   </div>
 
+  <!-- ── TAB: IMPORT TRADE-IN ─────────────── -->
+  <div id="pane-tradein" style="display:none;">
+    <div class="surface" style="padding:20px; margin-bottom:16px;">
+      <div style="font-weight:600; margin-bottom:4px;">Upload Excel Trade-in</div>
+      <div style="font-size:12px; color:var(--muted); margin-bottom:16px;">
+        Format kolom Excel: Kode Tradein, IMEI, Merk, Tipe, Storage, Kelengkapan, Grade, harga bid, Kelipatan Bid, ID Promo, Harga Promo<br>
+        <span style="color:var(--accent);">Sistem akan cek setiap IMEI ke database TAC server, lalu membandingkan Merk & Tipe Excel dengan data TAC.</span>
+      </div>
+      <label style="display:block; border:2px dashed var(--border); border-radius:6px; padding:32px; text-align:center; cursor:pointer; font-size:13px; color:var(--muted);" id="tradein-drop-zone">
+        <div>Klik atau drag file Excel (.xlsx / .xls) di sini</div>
+        <input type="file" accept=".xlsx,.xls" id="tradein-file" style="display:none" onchange="handleTradeinFileSelect(this)">
+      </label>
+      <div id="tradein-file-info" style="font-size:12px; color:var(--muted); margin-top:8px;"></div>
+      <button class="btn btn-primary" style="width:100%; margin-top:12px;" onclick="uploadTradeinExcel()" id="btn-tradein-upload" disabled>Import & Cek Excel</button>
+    </div>
+
+    <!-- Hasil Import -->
+    <div id="tradein-result" style="display:none;"></div>
+  </div>
+
 </div>
 
 <div id="toast"></div>
@@ -189,13 +211,23 @@
     setupDropZone();
   });
 
+  function doLogout() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/v1/auth/logout');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = function() { window.location.href = '/login.html'; };
+    xhr.send('{}');
+  }
+
   // ─── Tabs ─────────────────────────────────────
   function switchTab(t) {
     currentTab = t;
     document.getElementById('pane-logs').style.display   = t === 'logs'   ? '' : 'none';
     document.getElementById('pane-import').style.display = t === 'import' ? '' : 'none';
+    document.getElementById('pane-tradein').style.display = t === 'tradein' ? '' : 'none';
     document.getElementById('tab-logs').className   = 'tab' + (t === 'logs'   ? ' active' : '');
     document.getElementById('tab-import').className = 'tab' + (t === 'import' ? ' active' : '');
+    document.getElementById('tab-tradein').className = 'tab' + (t === 'tradein' ? ' active' : '');
   }
 
   // ─── Stats ────────────────────────────────────
@@ -388,7 +420,223 @@
     xhr.send('{}');
   }
 
-  // ─── Toast ────────────────────────────────────
+  // ─── Import Trade-in ───────────────────────
+  let tradeinFileData = null;
+  let tradeinFileName = '';
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var zone = document.getElementById('tradein-drop-zone');
+    if (!zone) return;
+    zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.style.borderColor = 'var(--accent)'; });
+    zone.addEventListener('dragleave', function() { zone.style.borderColor = 'var(--border)'; });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zone.style.borderColor = 'var(--border)';
+      var file = e.dataTransfer.files[0];
+      if (file) readTradeinFile(file);
+    });
+    zone.addEventListener('click', function() { document.getElementById('tradein-file').click(); });
+  });
+
+  function handleTradeinFileSelect(input) {
+    if (input.files && input.files[0]) readTradeinFile(input.files[0]);
+  }
+
+  function readTradeinFile(file) {
+    tradeinFileName = file.name;
+    document.getElementById('tradein-file-info').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      // Convert ArrayBuffer to base64
+      var binary = '';
+      var bytes = new Uint8Array(e.target.result);
+      for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      tradeinFileData = btoa(binary);
+      document.getElementById('btn-tradein-upload').disabled = false;
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function uploadTradeinExcel() {
+    if (!tradeinFileData) return;
+    var resBox = document.getElementById('tradein-result');
+    resBox.style.display = 'block';
+    resBox.style.padding = '16px';
+    resBox.className = 'surface';
+    resBox.innerHTML = '<div style="text-align:center; padding:24px;"><span class="loader"></span><div style="margin-top:8px; color:var(--muted); font-size:13px;">Sedang mengecek IMEI ke database TAC...</div></div>';
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/v1/admin/import-excel');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = function() {
+      var parsed;
+      try { parsed = JSON.parse(xhr.responseText); } catch(e) {
+        resBox.innerHTML = '<div style="color:var(--danger);">Response tidak valid dari server</div>';
+        return;
+      }
+      if (parsed.success) {
+        renderTradeinResult(parsed.data);
+      } else {
+        resBox.innerHTML = '<div style="color:var(--danger);">Gagal: ' + parsed.error.message + '</div>';
+        showToast('Import gagal', 'bad');
+      }
+    };
+    xhr.onerror = function() { resBox.innerHTML = '<div style="color:var(--danger);">Koneksi error</div>'; };
+    xhr.send(JSON.stringify({ file: tradeinFileData, filename: tradeinFileName }));
+  }
+
+  function renderTradeinResult(d) {
+    var resBox = document.getElementById('tradein-result');
+    var matchCount = d.match.length;
+    var notFoundCount = d.not_found.length;
+    var refurbishCount = d.refurbish_suspect.length;
+    var needVerifyCount = (d.need_verify || []).length;
+    var invalidCount = d.invalid_imei.length;
+
+    var html = '';
+
+    // Summary cards
+    html += '<div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px;">';
+    html += '<div class="surface stat-card"><div class="stat-num" style="color:var(--ok);">' + matchCount + '</div><div class="stat-lbl">Cocok / Aman</div></div>';
+    html += '<div class="surface stat-card"><div class="stat-num" style="color:var(--danger);">' + refurbishCount + '</div><div class="stat-lbl">Kemungkinan Refurbish</div></div>';
+    html += '<div class="surface stat-card"><div class="stat-num" style="color:var(--warn);">' + notFoundCount + '</div><div class="stat-lbl">Tidak Terdaftar di TAC</div></div>';
+    html += '<div class="surface stat-card"><div class="stat-num" style="color:#a78bfa;">' + needVerifyCount + '</div><div class="stat-lbl">Perlu Verifikasi</div></div>';
+    html += '<div class="surface stat-card"><div class="stat-num" style="color:var(--muted);">' + invalidCount + '</div><div class="stat-lbl">IMEI Tidak Valid</div></div>';
+    html += '</div>';
+
+    html += '<div style="font-size:13px; color:var(--muted); margin-bottom:16px;">Total baris di Excel: <b style="color:var(--text);">' + d.total + '</b></div>';
+
+    // Accordion: Kemungkinan Refurbish
+    if (refurbishCount > 0) {
+      html += '<div class="surface" style="margin-bottom:12px; overflow:hidden;">';
+      html += '<div onclick="toggleAccordion(this)" style="padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:8px; user-select:none;">';
+      html += '<span style="font-size:14px; color:var(--text);">+</span>';
+      html += '<span style="font-weight:600; font-size:14px; color:var(--danger);">Kemungkinan Refurbish (' + refurbishCount + ')</span>';
+      html += '<span style="font-size:12px; color:var(--muted); margin-left:8px;">Merk/tipe Excel beda dengan TAC</span>';
+      html += '</div>';
+      html += '<div class="accordion-body" style="display:none; border-top:1px solid var(--border); overflow-x:auto;">';
+      html += '<table><thead><tr><th>Baris</th><th>IMEI</th><th>Merk Excel</th><th>Tipe Excel</th><th>Merk TAC</th><th>Tipe TAC</th><th>Full Specs TAC</th></tr></thead><tbody>';
+      d.refurbish_suspect.forEach(function(r) {
+        html += '<tr>'
+          + '<td style="color:var(--muted);">' + r.row + '</td>'
+          + '<td style="font-family:monospace; font-size:12px;">' + r.imei + '</td>'
+          + '<td><span style="color:var(--danger);">' + (r.merk_excel || '-') + '</span></td>'
+          + '<td><span style="color:var(--danger);">' + (r.tipe_excel || '-') + '</span></td>'
+          + '<td><span style="color:var(--ok);">' + (r.merk_tac || '-') + '</span></td>'
+          + '<td><span style="color:var(--ok);">' + (r.tipe_tac || '-') + '</span></td>'
+          + '<td style="font-size:11px; color:var(--muted); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + (r.full_specs_tac || '-') + '</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+
+    // Accordion: Tidak terdaftar di TAC
+    if (notFoundCount > 0) {
+      html += '<div class="surface" style="margin-bottom:12px; overflow:hidden;">';
+      html += '<div onclick="toggleAccordion(this)" style="padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:8px; user-select:none;">';
+      html += '<span style="font-size:14px; color:var(--text);">+</span>';
+      html += '<span style="font-weight:600; font-size:14px; color:var(--warn);">List tidak ada di TAC (' + notFoundCount + ')</span>';
+      html += '<span style="font-size:12px; color:var(--muted); margin-left:8px;">Auto-added ke TAC memory</span>';
+      html += '</div>';
+      html += '<div class="accordion-body" style="display:none; border-top:1px solid var(--border); overflow-x:auto;">';
+      html += '<table><thead><tr><th>Baris</th><th>IMEI</th><th>TAC</th><th>Merk (Excel)</th><th>Tipe (Excel)</th><th>Status</th></tr></thead><tbody>';
+      d.not_found.forEach(function(r) {
+        html += '<tr>'
+          + '<td style="color:var(--muted);">' + r.row + '</td>'
+          + '<td style="font-family:monospace; font-size:12px;">' + r.imei + '</td>'
+          + '<td style="font-family:monospace; color:var(--muted);">' + r.tac + '</td>'
+          + '<td>' + (r.merk_excel || '<span style="color:var(--muted)">-</span>') + '</td>'
+          + '<td style="color:var(--muted);">' + (r.tipe_excel || '-') + '</td>'
+          + '<td>' + (r.auto_added ? '<span class="tag-ok">Auto-added</span>' : '<span class="tag-warn">Tidak ada data</span>') + '</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+
+    // Accordion: Perlu Verifikasi (Huawei dll)
+    if (needVerifyCount > 0) {
+      html += '<div class="surface" style="margin-bottom:12px; overflow:hidden;">';
+      html += '<div onclick="toggleAccordion(this)" style="padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:8px; user-select:none;">';
+      html += '<span style="font-size:14px; color:var(--text);">+</span>';
+      html += '<span style="font-weight:600; font-size:14px; color:#a78bfa;">Perlu Verifikasi (' + needVerifyCount + ')</span>';
+      html += '<span style="font-size:12px; color:var(--muted); margin-left:8px;">Format nama model berbeda, bukan refurbish</span>';
+      html += '</div>';
+      html += '<div class="accordion-body" style="display:none; border-top:1px solid var(--border); overflow-x:auto;">';
+      html += '<table><thead><tr><th>Baris</th><th>IMEI</th><th>Merk Excel</th><th>Tipe Excel</th><th>Merk TAC</th><th>Tipe TAC</th><th>Full Specs TAC</th></tr></thead><tbody>';
+      d.need_verify.forEach(function(r) {
+        html += '<tr>'
+          + '<td style="color:var(--muted);">' + r.row + '</td>'
+          + '<td style="font-family:monospace; font-size:12px;">' + r.imei + '</td>'
+          + '<td>' + (r.merk_excel || '-') + '</td>'
+          + '<td>' + (r.tipe_excel || '-') + '</td>'
+          + '<td style="color:var(--muted);">' + (r.merk_tac || '-') + '</td>'
+          + '<td style="color:var(--muted);">' + (r.tipe_tac || '-') + '</td>'
+          + '<td style="font-size:11px; color:var(--muted); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + (r.full_specs_tac || '-') + '</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+
+    // Accordion: IMEI tidak valid
+    if (invalidCount > 0) {
+      html += '<div class="surface" style="margin-bottom:12px; overflow:hidden;">';
+      html += '<div onclick="toggleAccordion(this)" style="padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:8px; user-select:none;">';
+      html += '<span style="font-size:14px; color:var(--text);">+</span>';
+      html += '<span style="font-weight:600; font-size:14px; color:var(--muted);">IMEI Tidak Valid (' + invalidCount + ')</span>';
+      html += '</div>';
+      html += '<div class="accordion-body" style="display:none; border-top:1px solid var(--border); overflow-x:auto;">';
+      html += '<table><thead><tr><th>Baris</th><th>IMEI</th><th>Merk</th><th>Tipe</th><th>Alasan</th></tr></thead><tbody>';
+      d.invalid_imei.forEach(function(r) {
+        html += '<tr>'
+          + '<td style="color:var(--muted);">' + r.row + '</td>'
+          + '<td style="font-family:monospace; font-size:12px; color:var(--danger);">' + (r.imei || '(kosong)') + '</td>'
+          + '<td>' + (r.merk || '-') + '</td>'
+          + '<td style="color:var(--muted);">' + (r.tipe || '-') + '</td>'
+          + '<td style="font-size:12px; color:var(--danger);">' + r.reason + '</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+
+    // Accordion: Cocok / Aman
+    if (matchCount > 0) {
+      html += '<div class="surface" style="margin-bottom:12px; overflow:hidden;">';
+      html += '<div onclick="toggleAccordion(this)" style="padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:8px; user-select:none;">';
+      html += '<span style="font-size:14px; color:var(--text);">+</span>';
+      html += '<span style="font-weight:600; font-size:14px; color:var(--ok);">Cocok / Aman (' + matchCount + ')</span>';
+      html += '</div>';
+      html += '<div class="accordion-body" style="display:none; border-top:1px solid var(--border); overflow-x:auto;">';
+      html += '<table><thead><tr><th>Baris</th><th>IMEI</th><th>Merk</th><th>Tipe</th><th>Merk TAC</th><th>Tipe TAC</th></tr></thead><tbody>';
+      d.match.forEach(function(r) {
+        html += '<tr>'
+          + '<td style="color:var(--muted);">' + r.row + '</td>'
+          + '<td style="font-family:monospace; font-size:12px;">' + r.imei + '</td>'
+          + '<td>' + (r.merk_excel || '-') + '</td>'
+          + '<td>' + (r.tipe_excel || '-') + '</td>'
+          + '<td style="color:var(--muted);">' + (r.merk_tac || '-') + '</td>'
+          + '<td style="color:var(--muted);">' + (r.tipe_tac || '-') + '</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+
+    resBox.innerHTML = html;
+    showToast('Cek Excel selesai', 'ok');
+  }
+
+  function toggleAccordion(header) {
+    var body = header.nextElementSibling;
+    var sign = header.firstElementChild;
+    if (body.style.display === 'none') {
+      body.style.display = '';
+      sign.textContent = '-';
+    } else {
+      body.style.display = 'none';
+      sign.textContent = '+';
+    }
+  }
+
+
   function showToast(msg, type) {
     var t = document.getElementById('toast');
     t.textContent = msg;

@@ -64,8 +64,14 @@ function parseTacEntry(brand, specs) {
     if (m) modelName = m[1].trim();
     const mc = specs.match(/\b(CK\d|KD\d|KC\d)\b/i);
     if (mc) modelCode = mc[1].toUpperCase().trim();
+  } else if (brand === "HUAWEI") {
+    const m  = specs.match(/HUAWEI\s+(.+?)(?:,|$)/);
+    if (m) modelName = m[1].trim();
+    const mc = specs.match(/\b([A-Z]{3}-[A-Z0-9]+)\b/);
+    if (mc) modelCode = mc[1].toUpperCase().trim();
   } else {
-    const m  = specs.match(/(?:^|,)\s*([^,]+?)$/);
+    // Generic: ambil segmen pertama sebelum koma
+    const m  = specs.match(/^([^,]+)/);
     if (m) modelName = m[1].trim();
   }
 
